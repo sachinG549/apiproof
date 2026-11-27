@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-outfit), "Avenir Next", "Segoe UI", sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-plex), ui-monospace, monospace;
+  --color-paper: #f3ecdf;
+  --color-ink: #1c1612;
+  --color-pine: #1f5c40;
+  --color-pine-deep: #123828;
+  --color-clay: #c4452d;
+  --color-sand: #e7dcc8;
+  --color-gold: #e2b657;
+  --color-card: #fbf6ee;
+  --color-line: #ddcfb8;
+  --color-muted: #6d6256;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 90% -10%, rgba(226, 182, 87, 0.28), transparent 55%),
+    linear-gradient(180deg, #f7f1e6 0%, var(--color-paper) 280px);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: #1f5c40;
+  color: #fbf6ee;
+}
+
+:focus-visible {
+  outline: 2px solid #1f5c40;
+  outline-offset: 3px;
+}
+
+.stamp {
+  border: 2px solid currentColor;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 650;
+  transform: rotate(-8deg);
+}
+
+details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
