@@ -71,7 +71,7 @@ npm run build
 
 1. Create a project on [Neon](https://neon.tech) (free). Copy the pooled connection string. That is `DATABASE_URL`.
 2. Create an API key at [console.groq.com](https://console.groq.com). That is `GROQ_API_KEY`. The default model is `openai/gpt-oss-120b`, falling back to `openai/gpt-oss-20b` after repeated 429s.
-3. Create an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). That is `GEMINI_API_KEY`. The default model is `gemini-2.5-flash`, falling back to `gemini-2.0-flash`.
+3. Create an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). That is `GEMINI_API_KEY`. The default model is `gemini-3.5-flash-lite`, falling back to `gemini-3.8-flash`. `gemini-2.0-flash` is retired and `gemini-2.5-flash` is deprecated. Flash-Lite thinks at `MINIMAL`. Gemini 3.8 Flash defaults to `MEDIUM` and does not accept `MINIMAL`, so APIProof sends `LOW` for it. That is what keeps a tool-calling task inside the 40 second budget. A 503 or a retired model id is retried, then the fallback model is tried. Each model call has its own `STEP_TIMEOUT_MS`, separate from the whole-task budget.
 4. Import this repo in Vercel (Hobby is enough). Set the env vars from [.env.example](.env.example). Set `NEXT_PUBLIC_SITE_URL` to the deployed origin so Open Graph links resolve. Do not set `ALLOW_STUB_LLM`.
 5. Deploy.
 6. Run migrations against Neon from your machine:
@@ -80,13 +80,23 @@ npm run build
    DATABASE_URL="postgres://…" npm run db:migrate
    ```
 
-7. Seed the gallery once you are happy with the keys. This spends real quota and writes real pass rates. It will refuse to run without a database and at least one model key.
+7. Seed the gallery from the deployed app. The server uses its own `DATABASE_URL`, `GROQ_API_KEY`, and `GEMINI_API_KEY`. `ADMIN_TOKEN` must be set. Each call scores one task per model, so a full gallery is many short requests instead of one long one. This spends real quota and writes real pass rates.
 
    ```bash
-   DATABASE_URL="postgres://…" GROQ_API_KEY="…" GEMINI_API_KEY="…" npm run gallery:seed
+   session="$(date -u +%Y%m%dT%H%M%SZ)"
+   while true; do
+     body="$(curl -sf -X POST "$NEXT_PUBLIC_SITE_URL/api/admin/gallery/seed" \
+       -H "authorization: Bearer $ADMIN_TOKEN" \
+       -H "content-type: application/json" \
+       -d "{\"session\":\"$session\"}")"
+     echo "$body"
+     echo "$body" | jq -e '.done == true' >/dev/null && break
+   done
    ```
 
-8. In the GitHub repo settings, add Actions secrets `DATABASE_URL`, `GROQ_API_KEY`, and `GEMINI_API_KEY`. The workflow `.github/workflows/gallery.yml` re-runs the seed every Monday. Until those secrets exist, the workflow fails on purpose rather than inventing scores. The gallery page shows “Not run yet” until a seed finishes.
+   `npm run gallery:seed` still works on a machine that has `DATABASE_URL` and a model key. It calls the same chunked function.
+
+8. In the GitHub repo settings, add Actions secrets `APIPROOF_URL` (the deployed origin, no trailing path) and `ADMIN_TOKEN` (the same value as on Vercel). The workflow `.github/workflows/gallery.yml` re-runs the seed every Monday by calling the endpoint. It does not need database or model secrets. Until those two secrets exist, the workflow fails on purpose rather than inventing scores. The gallery page shows “Not run yet” until a seed finishes.
 
 Refresh the vendored spec snapshots, without calling a model, with `npm run gallery:fetch`.
 
@@ -99,16 +109,18 @@ Refresh the vendored spec snapshots, without calling a model, with `npm run gall
 | `GEMINI_API_KEY` | Gemini key. Same as above |
 | `GROQ_MODEL` | Default `openai/gpt-oss-120b` |
 | `GROQ_FALLBACK_MODEL` | Default `openai/gpt-oss-20b` |
-| `GEMINI_MODEL` | Default `gemini-2.5-flash` |
-| `GEMINI_FALLBACK_MODEL` | Default `gemini-2.0-flash` |
+| `GEMINI_MODEL` | Default `gemini-3.5-flash-lite` |
+| `GEMINI_FALLBACK_MODEL` | Default `gemini-3.8-flash` |
+| `GEMINI_THINKING_LEVEL` | Optional. Unset uses `MINIMAL` on Flash-Lite and `LOW` on Gemini 3.8 Flash |
+| `STEP_TIMEOUT_MS` | Default 18000. One model call, including retry and fallback |
 | `RATE_LIMIT_PER_IP_DAILY` | Default 8 new runs per IP per day |
 | `RATE_LIMIT_GLOBAL_DAILY` | Default 200 new runs per day |
 | `RATE_LIMIT_SALT` | Salt for the hashed IP |
 | `MAX_SPEC_BYTES` | Default 1500000 |
 | `MAX_OPERATIONS` | Default 40 |
 | `MAX_AGENT_STEPS` | Default 6 tool rounds per task |
-| `TASK_TIMEOUT_MS` | Default 40000 |
-| `ADMIN_TOKEN` | Optional lock for `/stats` |
+| `TASK_TIMEOUT_MS` | Default 40000. Checked between model calls, not as one abort for the whole task |
+| `ADMIN_TOKEN` | Locks `/stats` when set, and is required for `POST /api/admin/gallery/seed` |
 | `NEXT_PUBLIC_SITE_URL` | Public origin |
 | `ALLOW_STUB_LLM` | Leave unset. `1` forces the stub even when keys exist |
 

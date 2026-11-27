@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "@/lib/db/schema";
 import type { GalleryLink, ResultRecord, RunRecord, StatsSnapshot, Store } from "@/lib/db/store";
@@ -36,6 +36,10 @@ export function createPostgresStore(databaseUrl: string): Store {
         .where(and(eq(schema.runs.cacheKey, cacheKey), eq(schema.runs.status, "complete")))
         .limit(1);
       return rows[0] ? mapRun(rows[0]) : null;
+    },
+    async listByCachePrefix(prefix) {
+      const rows = await db.select().from(schema.runs).where(like(schema.runs.cacheKey, `${prefix}%`));
+      return rows.map(mapRun).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     },
     async listResults(runId) {
       const rows = await db.select().from(schema.taskResults).where(eq(schema.taskResults.runId, runId));
