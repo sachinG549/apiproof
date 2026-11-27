@@ -1,0 +1,40 @@
+{
+  "name": "apiproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Measure whether an AI agent can complete real tasks against your OpenAPI spec.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "gallery:fetch": "tsx scripts/fetch-gallery-specs.ts",
+    "gallery:seed": "tsx scripts/seed-gallery.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "drizzle-orm": "^0.45.1",
+    "next": "^16.0.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "drizzle-kit": "^0.31.8",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.0.7",
+    "tailwindcss": "^4.1.17",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
