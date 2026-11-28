@@ -3,7 +3,7 @@ import { ProviderError } from "@/lib/errors";
 import { evaluateTask } from "@/lib/checks/evaluate";
 import { planTask } from "@/lib/agent/plan";
 import type { ChatMessage, LlmProvider } from "@/lib/agent/providers";
-import { operationsToTools, toolIndex } from "@/lib/agent/tools";
+import { operationsToTools, selectToolsForTask, toolIndex } from "@/lib/agent/tools";
 import { MockApi } from "@/lib/mock/server";
 import type { ParsedSpec, StepRecord, TaskRunResult } from "@/lib/types";
 import { redactArgs, truncateJson, truncateText } from "@/lib/util";
@@ -21,7 +21,7 @@ export async function runTask(input: {
   const timeoutMs = input.timeoutMs ?? config.taskTimeoutMs;
   const stepTimeoutMs = input.stepTimeoutMs ?? config.stepTimeoutMs;
   const maxSteps = input.maxSteps ?? config.maxAgentSteps;
-  const tools = operationsToTools(input.spec);
+  const tools = selectToolsForTask(operationsToTools(input.spec), input.task);
   const mock = new MockApi(input.spec);
   const steps: StepRecord[] = [];
   const unknownTools: string[] = [];

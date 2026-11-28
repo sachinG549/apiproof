@@ -1,107 +1,105 @@
 import Link from "next/link";
-import { ReportView } from "@/components/report-view";
-import { SAMPLE_REPORT } from "@/lib/sample-report";
+import { PetstoreLaunch } from "@/components/petstore-launch";
+
+const steps = [
+  ["Paste a spec", "Give a public OpenAPI URL, upload a file, or paste JSON or YAML. Swagger 2.0 is converted. The spec is checked before anything runs."],
+  ["Pick the tasks", "Write 3 to 10 jobs in plain language, or use suggestions based on the operations in the spec. You can edit every one."],
+  ["Read the report", "Two models try each task on a mock of your API. You get a shareable page: pass, fail, or unscored, plus the trace."],
+];
+
+const faqs = [
+  ["Is my spec stored?", "The trimmed spec is saved with the run so the report can be opened again. APIProof never calls the real API and never edits the document."],
+  ["Which models run?", "Groq and Gemini, when those keys are set on the server. If one key is missing, the run says so and continues with the other."],
+  ["What are the limits?", "3 to 10 tasks, a size cap on the spec, and a daily cap on new runs. A repeat of the same spec, tasks, and models reuses a finished report and does not count."],
+  ["What does it cost?", "The public app is free. It uses free-tier model quotas. If a quota runs out, that model is marked unscored instead of failed."],
+];
 
 export default function HomePage() {
   return (
     <div>
-      <section className="mx-auto grid max-w-6xl items-end gap-10 px-5 py-16 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        <p className="text-xs uppercase tracking-[0.18em] text-pine">OpenAPI, tested with an agent</p>
+        <h1 className="mt-4 max-w-3xl font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl">
+          Can an AI agent actually complete a task with your API?
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg leading-8">
+          APIProof runs tasks against a mock of your OpenAPI spec and records whether the agent finished the job. A linter only scores how the document looks.
+        </p>
+        <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <Link href="/new" className="rounded-full bg-ink px-5 py-3 text-sm text-card">
+            Test your spec
+          </Link>
+          <PetstoreLaunch className="rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-50" />
+        </div>
+        <p className="mt-4 text-sm text-muted">Petstore is one click. No account. The report is a link you can share.</p>
+      </section>
+
+      <section className="border-y border-line bg-card/70" aria-labelledby="how-heading">
+        <div className="mx-auto max-w-6xl px-5 py-12">
+          <h2 id="how-heading" className="font-serif text-3xl tracking-tight">
+            How it works
+          </h2>
+          <ol className="mt-8 grid gap-8 md:grid-cols-3">
+            {steps.map(([title, body], index) => (
+              <li key={title}>
+                <p className="font-mono text-xs text-pine">Step {index + 1}</p>
+                <h3 className="mt-2 font-serif text-2xl">{title}</h3>
+                <p className="mt-2 text-sm leading-6">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-14 lg:grid-cols-2" aria-labelledby="score-heading">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-pine">Task success, not a document score</p>
-          <h1 className="mt-4 font-serif text-5xl leading-[1.02] tracking-tight sm:text-6xl">
-            Your API scored 82 on agent-readiness.
-            <span className="mt-2 block text-clay">The agent still failed a basic task.</span>
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8">
-            Static linters score how a spec looks. APIProof hands the spec to an agent, runs the task against a mock of your API, and records whether the job got done.
+          <h2 id="score-heading" className="font-serif text-3xl tracking-tight">
+            What the score means
+          </h2>
+          <p className="mt-4 text-sm leading-7">
+            A pass means the agent called the operations the task needed, with valid parameters, and reused ids from earlier responses. A fail means it did not. Unscored means the model hit a quota, a timeout, or an overload. That is not a fault in your API.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/new" className="rounded-full bg-ink px-5 py-3 text-sm text-card">
-              Test a spec
-            </Link>
-            <Link href="/example" className="rounded-full border border-ink px-5 py-3 text-sm">
-              See a report layout
-            </Link>
-            <Link href="/gallery" className="rounded-full px-5 py-3 text-sm text-pine">
-              Public gallery
-            </Link>
-          </div>
+          <p className="mt-3 text-sm leading-7">
+            The report also names the path that confused the agent. APIProof does not change the spec.
+          </p>
+          <Link href="/example" className="mt-4 inline-block text-sm text-pine">
+            Open the sample report layout
+          </Link>
         </div>
         <div className="rounded-lg border border-line bg-card p-5 shadow-[8px_8px_0_#1c1612]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-muted">What a miss looks like</p>
-              <p className="mt-2 font-serif text-2xl">Create a customer, then fetch their invoice.</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Sample preview · not a measured run</p>
+          <p className="mt-3 font-serif text-2xl">Create a customer, then fetch their invoice.</p>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-md bg-paper px-3 py-3">
+              <dt className="text-muted">Model A</dt>
+              <dd className="mt-1 font-serif text-3xl text-clay">Fail</dd>
+              <dd className="text-xs text-muted">Unclear id linkage</dd>
             </div>
-            <span className="stamp px-2 py-1 text-[11px] text-clay">Failed task</span>
-          </div>
-          <ol className="mt-5 space-y-2 font-mono text-xs">
+            <div className="rounded-md bg-paper px-3 py-3">
+              <dt className="text-muted">Model B</dt>
+              <dd className="mt-1 font-serif text-3xl text-pine">Pass</dd>
+              <dd className="text-xs text-muted">Id reused from the create call</dd>
+            </div>
+          </dl>
+          <ol className="mt-4 space-y-2 font-mono text-xs">
             <li className="rounded-md bg-paper px-3 py-2">POST /customers → 201 · id cus_1001</li>
             <li className="rounded-md bg-paper px-3 py-2">GET /invoices/cus_demo → 404</li>
           </ol>
-          <p className="mt-4 text-sm leading-6">
-            The spec never said that <span className="font-mono">customer.id</span> is the value for the next call. The score stayed high. The task did not.
-          </p>
         </div>
       </section>
 
-      <section className="border-y border-line bg-card/70">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-3">
-          {[
-            ["Bring a spec", "Paste JSON or YAML, upload a file, or give a public URL. Swagger 2.0 is converted. Friendly errors when it is not a spec."],
-            ["Name the tasks", "Write 3 to 10 jobs, or ask for suggestions grounded in the operations you actually defined. You can edit every one."],
-            ["Compare two models", "Groq and Gemini each attempt the tasks against the same mock. You get a pass rate, the trace, and a spec change you make yourself."],
-          ].map(([title, body], index) => (
-            <div key={title}>
-              <p className="font-mono text-xs text-pine">0{index + 1}</p>
-              <h2 className="mt-2 font-serif text-2xl">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 py-14">
-        <h2 className="font-serif text-3xl tracking-tight">A score answers a different question</h2>
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-[0.14em] text-muted">
-                <th className="py-3 font-medium">Question</th>
-                <th className="py-3 font-medium">Static score</th>
-                <th className="py-3 font-medium">APIProof</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["Does the document parse and look consistent?", "Yes", "Yes, first"],
-                ["Did an agent pick the right operation?", "Unknown", "Recorded"],
-                ["Did it carry an id from create to fetch?", "Unknown", "Checked against the call log"],
-                ["Did auth confuse it?", "Unknown", "401s are classified"],
-                ["Who edits the spec?", "A human, usually later", "A human. APIProof only suggests."],
-              ].map((row) => (
-                <tr key={row[0]} className="border-b border-line/80">
-                  {row.map((cell) => (
-                    <td key={cell} className="py-3 pr-4 align-top">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="bg-ink text-card">
-        <div className="mx-auto max-w-6xl px-5 py-14">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">Report layout</p>
-          <h2 className="mt-2 font-serif text-4xl text-card">The page you can share</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-sand">
-            Each run has a URL. The picture below is a drawing of that page, labeled as an illustration. Measured runs live in the gallery after the seed job, and on your own report links.
-          </p>
-          <div className="mt-8 overflow-hidden rounded-lg bg-paper text-ink">
-            <ReportView report={SAMPLE_REPORT} illustrative />
+      <section className="border-t border-line" aria-labelledby="faq-heading">
+        <div className="mx-auto max-w-3xl px-5 py-14">
+          <h2 id="faq-heading" className="font-serif text-3xl tracking-tight">
+            Questions
+          </h2>
+          <div className="mt-6 divide-y divide-line border-y border-line">
+            {faqs.map(([question, answer]) => (
+              <details key={question} className="py-4">
+                <summary className="text-base font-medium">{question}</summary>
+                <p className="mt-2 text-sm leading-6 text-muted">{answer}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>

@@ -33,7 +33,12 @@ export function sanitizeSession(value: unknown): string | null {
   return trimmed;
 }
 
-export async function seedGalleryStep(input: { session: string; store?: Store; providers?: LlmProvider[] }): Promise<SeedStep> {
+export async function seedGalleryStep(input: {
+  session: string;
+  store?: Store;
+  providers?: LlmProvider[];
+  rerunUnscored?: boolean;
+}): Promise<SeedStep> {
   const session = sanitizeSession(input.session);
   if (!session) throw new UserError("Pass a session id of 4 to 40 letters, numbers, dashes, or underscores.");
   const store = input.store || getStore();
@@ -41,15 +46,16 @@ export async function seedGalleryStep(input: { session: string; store?: Store; p
   const prefix = `gallery-seed:${session}:`;
   const runs = await store.listByCachePrefix(prefix);
   const active = runs.find((run) => run.status === "pending" || run.status === "running");
+  const allowed = await targetSlugs(store, Boolean(input.rerunUnscored));
   if (active) {
     const report = await advanceRun(active.id, store, providers);
     const slug = slugFromKey(active.cacheKey, prefix);
     if (report.run.status === "complete" && slug) await store.upsertGallery(slug, active.id);
-    return snapshot(session, store, prefix, slug, active.id, report.run.status);
+    return snapshot(session, store, prefix, slug, active.id, report.run.status, allowed);
   }
 
   const completed = new Set(runs.filter((run) => run.status === "complete").map((run) => slugFromKey(run.cacheKey, prefix)));
-  const next = GALLERY_SOURCES.find((source) => !completed.has(source.slug));
+  const next = allowed.find((slug) => !completed.has(slug));
   if (!next) {
     return {
       done: true,
@@ -57,12 +63,12 @@ export async function seedGalleryStep(input: { session: string; store?: Store; p
       slug: null,
       runId: null,
       status: "complete",
-      completedSpecs: GALLERY_SOURCES.map((source) => source.slug),
+      completedSpecs: allowed.filter((slug) => completed.has(slug)),
       remainingSpecs: [],
     };
   }
 
-  const loaded = loadGallerySpec(next.slug);
+  const loaded = loadGallerySpec(next);
   const created = await createRun({
     specText: loaded.text,
     tasks: loaded.source.tasks,
@@ -72,11 +78,22 @@ export async function seedGalleryStep(input: { session: string; store?: Store; p
     skipRateLimit: true,
     bypassCache: true,
     noticeExtra: loaded.source.note,
-    cacheKey: `${prefix}${next.slug}`,
+    cacheKey: `${prefix}${next}`,
   });
   const report = await advanceRun(created.id, store, providers);
-  if (report.run.status === "complete") await store.upsertGallery(next.slug, created.id);
-  return snapshot(session, store, prefix, next.slug, created.id, report.run.status);
+  if (report.run.status === "complete") await store.upsertGallery(next, created.id);
+  return snapshot(session, store, prefix, next, created.id, report.run.status, allowed);
+}
+
+async function targetSlugs(store: Store, rerunUnscored: boolean): Promise<string[]> {
+  if (!rerunUnscored) return GALLERY_SOURCES.map((source) => source.slug);
+  const links = await store.listGallery();
+  const slugs: string[] = [];
+  for (const link of links) {
+    const results = await store.listResults(link.runId);
+    if (results.some((result) => result.status === "error" || result.passed == null)) slugs.push(link.slug);
+  }
+  return slugs;
 }
 
 function liveProviders(): LlmProvider[] {
@@ -94,13 +111,14 @@ async function snapshot(
   slug: string | null,
   runId: string | null,
   status: string | null,
+  allowed: string[],
 ): Promise<SeedStep> {
   const runs = await store.listByCachePrefix(prefix);
   const completedSpecs = runs
     .filter((run) => run.status === "complete")
     .map((run) => slugFromKey(run.cacheKey, prefix))
     .filter((item): item is string => Boolean(item));
-  const remainingSpecs = GALLERY_SOURCES.map((source) => source.slug).filter((item) => !completedSpecs.includes(item));
+  const remainingSpecs = allowed.filter((item) => !completedSpecs.includes(item));
   return {
     done: remainingSpecs.length === 0,
     session,

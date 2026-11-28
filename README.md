@@ -1,6 +1,6 @@
 # APIProof
 
-Your API scored 82 on agent-readiness. The agent still failed a basic task.
+Can an AI agent actually complete a task with your API?
 
 Static linters score how an OpenAPI document looks. APIProof measures whether an agent can finish a job. You give it a spec and a handful of tasks in plain language. It builds a stateful mock from the spec, hands the operations to a model as tools, and writes down what happened: pass or fail, the trace, and a spec change a person can make. It never calls the real API, and it never edits the spec.
 

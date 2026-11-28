@@ -18,10 +18,10 @@ export const metadata: Metadata = {
     template: "%s · APIProof",
   },
   description:
-    "Static linters score how an OpenAPI spec looks. APIProof measures whether an agent can actually finish a task against a mock of that API.",
+    "APIProof tests whether an AI agent can complete tasks against your OpenAPI spec. It is not a linter. Paste a spec, name the tasks, and share the report.",
   openGraph: {
-    title: "APIProof — task success for OpenAPI",
-    description: "Hand an agent your spec and a real task. See if the job gets done.",
+    title: "APIProof — can an agent actually use your API?",
+    description: "Run tasks against a mock of your OpenAPI spec and see whether the agent finished the job.",
     type: "website",
   },
 };

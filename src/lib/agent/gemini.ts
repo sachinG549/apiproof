@@ -1,6 +1,5 @@
 import type { ChatMessage, LlmCompletion, ToolSpec } from "@/lib/agent/providers";
 import { ProviderError } from "@/lib/errors";
-import { boundSchema } from "@/lib/spec/schema";
 import type { JsonSchema } from "@/lib/types";
 
 export type GeminiReplayPart = {
@@ -85,7 +84,7 @@ export function toGeminiBody(messages: ChatMessage[], tools: ToolSpec[], model: 
             functionDeclarations: tools.map((tool) => ({
               name: tool.name,
               description: tool.description,
-              parameters: geminiSchema(boundSchema(tool.parameters)),
+              parameters: geminiToolSchema(tool.parameters),
             })),
           },
         ]
@@ -220,18 +219,41 @@ function normalizePart(part: GeminiResponsePart): GeminiReplayPart {
   };
 }
 
-function geminiSchema(schema: JsonSchema): JsonSchema {
-  const next: JsonSchema = {};
-  if (schema.type) next.type = schema.type;
-  if (schema.description) next.description = schema.description;
-  if (schema.enum) next.enum = schema.enum;
-  if (schema.required) next.required = schema.required;
-  if (schema.items) next.items = geminiSchema(schema.items);
-  if (schema.properties) {
-    next.properties = {};
-    for (const [key, value] of Object.entries(schema.properties)) next.properties[key] = geminiSchema(value);
+/** Gemini rejects $ref, oneOf, empty objects, and arrays without items. */
+export function geminiToolSchema(schema: JsonSchema | undefined, depth = 0): JsonSchema {
+  if (!schema || depth > 3) return { type: "string", description: "Shortened to fit Gemini's tool schema." };
+  const union = schema.oneOf?.[0] || schema.anyOf?.[0] || schema.allOf?.[0];
+  if (union) return geminiToolSchema({ ...union, description: schema.description || union.description }, depth + 1);
+  const type = geminiType(schema);
+  const description = schema.description?.replace(/\s+/g, " ").slice(0, 180);
+  if (type === "array") {
+    return { type: "array", description, items: geminiToolSchema(schema.items || { type: "string" }, depth + 1) };
   }
-  return next;
+  if (type === "object") {
+    const properties: Record<string, JsonSchema> = {};
+    for (const [key, child] of Object.entries(schema.properties || {}).slice(0, 16)) {
+      const safe = key.replace(/[^A-Za-z0-9_.-]/g, "_").replace(/^\.+/, "").slice(0, 64);
+      if (!safe) continue;
+      properties[safe] = geminiToolSchema(child, depth + 1);
+    }
+    if (!Object.keys(properties).length) {
+      properties.value = { type: "string", description: "JSON object. The original schema had no listed fields." };
+    }
+    const required = (schema.required || []).map((name) => name.replace(/[^A-Za-z0-9_.-]/g, "_")).filter((name) => name in properties);
+    return { type: "object", description, properties, ...(required.length ? { required: required.slice(0, 16) } : {}) };
+  }
+  const enumValues = schema.enum
+    ?.filter((item) => ["string", "number", "boolean"].includes(typeof item))
+    .slice(0, 8);
+  return { type, description, ...(enumValues?.length ? { enum: enumValues } : {}) };
+}
+
+function geminiType(schema: JsonSchema): string {
+  const raw = Array.isArray(schema.type) ? schema.type.find((item) => item !== "null") : schema.type;
+  if (raw === "integer" || raw === "number" || raw === "boolean" || raw === "string" || raw === "array" || raw === "object") return raw;
+  if (schema.properties || schema.required) return "object";
+  if (schema.items) return "array";
+  return "string";
 }
 
 function safeJson(text: string): Record<string, unknown> {

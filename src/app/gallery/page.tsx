@@ -55,7 +55,9 @@ export default async function GalleryPage() {
                   const rate = decided ? Math.round((model.passed / decided) * 100) : null;
                   return (
                     <p key={model.modelId}>
-                      {model.modelLabel}: {rate == null ? "not scored" : `${rate}%`} ({model.passed}/{decided || model.total})
+                      {model.modelLabel}: {rate == null ? "Unscored" : `${rate}% pass`}
+                      {decided ? ` (${model.passed}/${decided} scored)` : ""}
+                      {model.unscored ? ` · ${model.unscored} unscored (quota, timeout, or overload)` : ""}
                     </p>
                   );
                 })}

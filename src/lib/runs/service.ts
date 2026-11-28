@@ -11,6 +11,9 @@ import { limitOperations } from "@/lib/spec/trim";
 import type { ParsedSpec, PublicReport, TaskRunResult } from "@/lib/types";
 import { dayKey, hashIp, newId, sha256, stableStringify } from "@/lib/util";
 
+/** Bump when scoring or the tool payload changes, so old reports are not reused. */
+export const SCORING_VERSION = "2026-11-28-tools-v3";
+
 export async function createRun(input: {
   specText: string;
   tasks: string[];
@@ -35,14 +38,15 @@ export async function createRun(input: {
   const store = input.store || getStore();
   const cacheKey = input.cacheKey || sha256(
     [
+      SCORING_VERSION,
       stableStringify(parsed.document),
       tasks.map((task) => task.trim().replace(/\s+/g, " ").toLowerCase()).join("\n"),
-      providers.map((provider) => provider.id).sort().join(","),
+      providers.map((provider) => `${provider.id}:${provider.model}`).sort().join(","),
     ].join("\n---\n"),
   );
   if (!input.bypassCache) {
     const cached = await store.findCached(cacheKey);
-    if (cached) return { id: cached.id, cached: true };
+    if (cached && (await cacheIsUsable(store, cached.id))) return { id: cached.id, cached: true };
   }
   if (!input.skipRateLimit) {
     await enforceRateLimit(store, input.ip || "local");
@@ -213,6 +217,11 @@ async function enforceRateLimit(store: Store, ip: string): Promise<void> {
   if (ipCount > config.rateLimitPerIp) {
     throw new UserError(`This network has used its ${config.rateLimitPerIp} runs for today. Try again tomorrow.`, 429);
   }
+}
+
+async function cacheIsUsable(store: Store, runId: string): Promise<boolean> {
+  const results = await store.listResults(runId);
+  return results.length > 0 && results.every((result) => result.status === "done" && result.passed !== null);
 }
 
 function modeFor(providers: LlmProvider[]): RunRecord["providerMode"] {
