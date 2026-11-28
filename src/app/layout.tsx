@@ -9,20 +9,23 @@ const sans = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const serif = Newsreader({ subsets: ["latin"], variable: "--font-newsreader" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex" });
 
-const config = getConfig();
+const siteUrl = getConfig().siteUrl.replace(/\/$/, "");
 
 export const metadata: Metadata = {
-  metadataBase: new URL(config.siteUrl),
+  metadataBase: new URL(siteUrl),
+  alternates: { canonical: siteUrl },
   title: {
     default: "APIProof — task success for OpenAPI",
     template: "%s · APIProof",
   },
   description:
-    "Static linters score how an OpenAPI spec looks. APIProof measures whether an agent can actually finish a task against a mock of that API.",
+    "APIProof tests whether an AI agent can complete tasks against your OpenAPI spec. It is not a linter. Paste a spec, name the tasks, and share the report.",
   openGraph: {
-    title: "APIProof — task success for OpenAPI",
-    description: "Hand an agent your spec and a real task. See if the job gets done.",
+    title: "APIProof — can an agent actually use your API?",
+    description: "Run tasks against a mock of your OpenAPI spec and see whether the agent finished the job.",
     type: "website",
+    url: siteUrl,
+    images: [{ url: `${siteUrl}/opengraph-image`, width: 1200, height: 630, alt: "APIProof" }],
   },
 };
 

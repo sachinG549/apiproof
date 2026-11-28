@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   return respond(async () => {
     assertAdminRequest(request);
-    const body = (await request.json().catch(() => ({}))) as { session?: string };
+    const body = (await request.json().catch(() => ({}))) as { session?: string; rerun_unscored?: boolean };
     const session = sanitizeSession(body.session) || defaultSession();
     if (!sanitizeSession(session)) throw new UserError("The session id was not usable.");
-    const step = await seedGalleryStep({ session });
+    const step = await seedGalleryStep({ session, rerunUnscored: Boolean(body.rerun_unscored) });
     return NextResponse.json(step);
   });
 }

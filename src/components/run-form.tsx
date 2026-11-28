@@ -239,8 +239,16 @@ export function RunForm({
             ))}
           </div>
         ) : null}
-        {error ? <p className="mt-4 text-sm text-clay">{error}</p> : null}
-        {busy ? <p className="mt-4 text-sm">{busy}…</p> : null}
+        {error ? (
+          <p role="alert" className="mt-4 text-sm text-clay">
+            {error}
+          </p>
+        ) : null}
+        {busy ? (
+          <p className="mt-4 text-sm" role="status">
+            {busy}…
+          </p>
+        ) : null}
         <button
           type="button"
           disabled={Boolean(busy) || readyTasks.length < 3 || !specText}
