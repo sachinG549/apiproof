@@ -9,10 +9,11 @@ const sans = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const serif = Newsreader({ subsets: ["latin"], variable: "--font-newsreader" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex" });
 
-const config = getConfig();
+const siteUrl = getConfig().siteUrl.replace(/\/$/, "");
 
 export const metadata: Metadata = {
-  metadataBase: new URL(config.siteUrl),
+  metadataBase: new URL(siteUrl),
+  alternates: { canonical: siteUrl },
   title: {
     default: "APIProof — task success for OpenAPI",
     template: "%s · APIProof",
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
     title: "APIProof — can an agent actually use your API?",
     description: "Run tasks against a mock of your OpenAPI spec and see whether the agent finished the job.",
     type: "website",
+    url: siteUrl,
+    images: [{ url: `${siteUrl}/opengraph-image`, width: 1200, height: 630, alt: "APIProof" }],
   },
 };
 

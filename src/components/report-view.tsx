@@ -1,5 +1,6 @@
 import type { PublicReport } from "@/lib/types";
 import { FeedbackForm } from "@/components/feedback-form";
+import { unscoredReason, unscoredReasons } from "@/lib/unscored";
 
 const FAILURE_LABELS: Record<string, string> = {
   wrong_operation: "Wrong operation",
@@ -68,13 +69,14 @@ export function ReportView({
         </div>
       ) : null}
       <p className="mt-4 max-w-3xl text-sm leading-6">
-        A pass means the agent finished that task. A fail means it did not. Unscored means the model hit a quota, a timeout, or an overload. Unscored is not a fault in the API.
+        A pass means the agent finished that task. A fail means it did not. Unscored means that attempt could not be scored. The label is the recorded reason. It is not a fault in the API.
       </p>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2">
         {report.summary.models.map((model) => {
           const decided = model.passed + model.failed;
           const rate = decided ? Math.round((model.passed / decided) * 100) : null;
+          const reasons = unscoredReasons(report.results.filter((result) => result.modelId === model.modelId));
           return (
             <div key={model.modelId} className="rounded-lg border border-line bg-card p-5">
               <p className="text-sm text-muted">{model.modelLabel}</p>
@@ -87,7 +89,7 @@ export function ReportView({
               </p>
               {model.unscored ? (
                 <p className="mt-2 text-sm text-muted">
-                  Unscored attempts stopped because of quota, timeout, or overload. They are left out of the percentage.
+                  {model.unscored} unscored: {reasons.join(", ")}. Left out of the percentage.
                 </p>
               ) : null}
               <p className="mt-3 text-xs text-muted">
@@ -112,7 +114,7 @@ export function ReportView({
                 {rows.map((result) => (
                   <div key={result.id} className="px-5 py-4">
                     <div className="flex flex-wrap items-center gap-3">
-                      <Mark passed={result.passed} status={result.status} />
+                      <Mark passed={result.passed} status={result.status} reason={unscoredReason(result)} />
                       <p className="text-sm font-medium">{result.modelLabel}</p>
                       {result.failureMode ? (
                         <span className="rounded-full bg-sand px-2 py-0.5 text-xs">
@@ -168,7 +170,7 @@ export function ReportView({
   );
 }
 
-function Mark({ passed, status }: { passed: boolean | null; status: string }) {
+function Mark({ passed, status, reason }: { passed: boolean | null; status: string; reason: string }) {
   if (status === "pending" || status === "running") {
     return <span className="rounded-full bg-sand px-2 py-0.5 text-xs uppercase tracking-wide">{status}</span>;
   }
@@ -178,5 +180,5 @@ function Mark({ passed, status }: { passed: boolean | null; status: string }) {
   if (passed === false) {
     return <span className="stamp inline-block px-2 py-0.5 text-[11px] text-clay">Fail</span>;
   }
-  return <span className="rounded-full bg-sand px-2 py-0.5 text-xs uppercase tracking-wide">Unscored</span>;
+  return <span className="rounded-full bg-sand px-2 py-0.5 text-xs">Unscored · {reason}</span>;
 }

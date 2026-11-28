@@ -23,7 +23,7 @@ export default function AboutPage() {
             Each task is mapped to operations from the words in the sentence. When that mapping is confident, the check is deterministic: the expected calls returned success, required parameters were present, a quoted name showed up in a request, and an id used later already appeared in an earlier response. When the mapping is weak, the same model acts as a judge and has to quote the call log. A pass without a matching quote is rejected.
           </p>
           <p className="mt-3">
-            A fail is labeled: wrong operation, missing or ambiguous parameter, unclear id linkage, auth confusion, schema mismatch, a made-up endpoint, or the agent gave up. Quota, timeout, and overload are unscored. They are not treated as a problem in the spec.
+            A fail is labeled: wrong operation, missing or ambiguous parameter, unclear id linkage, auth confusion, schema mismatch, a made-up endpoint, or the agent gave up. If a model cannot finish, that attempt is unscored and the report names the recorded reason. It is not treated as a problem in the spec.
           </p>
         </section>
         <section>

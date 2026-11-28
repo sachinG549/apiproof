@@ -2,16 +2,17 @@ import Link from "next/link";
 import { PetstoreLaunch } from "@/components/petstore-launch";
 
 const steps = [
-  ["Paste a spec", "Give a public OpenAPI URL, upload a file, or paste JSON or YAML. Swagger 2.0 is converted. The spec is checked before anything runs."],
+  ["Paste a spec", "Give a public OpenAPI URL, upload a file, or paste JSON or YAML. Swagger 2.0 is converted. You do not need a key or credentials for that API."],
   ["Pick the tasks", "Write 3 to 10 jobs in plain language, or use suggestions based on the operations in the spec. You can edit every one."],
-  ["Read the report", "Two models try each task on a mock of your API. You get a shareable page: pass, fail, or unscored, plus the trace."],
+  ["Read the report", "Agents try each task on a mock built from the spec. No real calls are made. You get a shareable page: pass, fail, or unscored, plus the trace."],
 ];
 
 const faqs = [
-  ["Is my spec stored?", "The trimmed spec is saved with the run so the report can be opened again. APIProof never calls the real API and never edits the document."],
-  ["Which models run?", "Groq and Gemini, when those keys are set on the server. If one key is missing, the run says so and continues with the other."],
+  ["Do I need an API key?", "No. You do not need credentials for the API you are testing. Agents call a mock built from the spec, so nothing is sent to the real service."],
+  ["Is my spec stored?", "The trimmed spec is saved with the run so the report can be opened again. APIProof never edits the document."],
+  ["Which models run?", "The public app runs Groq and Gemini for you. You do not bring your own keys. If one model is unavailable, the report says so and still shows the other."],
   ["What are the limits?", "3 to 10 tasks, a size cap on the spec, and a daily cap on new runs. A repeat of the same spec, tasks, and models reuses a finished report and does not count."],
-  ["What does it cost?", "The public app is free. It uses free-tier model quotas. If a quota runs out, that model is marked unscored instead of failed."],
+  ["What does it cost?", "The public app is free. If a model cannot finish, that attempt is marked unscored and the report says why."],
 ];
 
 export default function HomePage() {
@@ -31,7 +32,9 @@ export default function HomePage() {
           </Link>
           <PetstoreLaunch className="rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-50" />
         </div>
-        <p className="mt-4 text-sm text-muted">Petstore is one click. No account. The report is a link you can share.</p>
+        <p className="mt-4 max-w-2xl text-sm text-muted">
+          Petstore is one click. No account, and no API key for the service you are testing. Agents run against a mock, so no real calls are made.
+        </p>
       </section>
 
       <section className="border-y border-line bg-card/70" aria-labelledby="how-heading">
@@ -57,7 +60,7 @@ export default function HomePage() {
             What the score means
           </h2>
           <p className="mt-4 text-sm leading-7">
-            A pass means the agent called the operations the task needed, with valid parameters, and reused ids from earlier responses. A fail means it did not. Unscored means the model hit a quota, a timeout, or an overload. That is not a fault in your API.
+            A pass means the agent called the operations the task needed, with valid parameters, and reused ids from earlier responses. A fail means it did not. Unscored means that attempt could not be scored. The report names the reason. It is not a fault in your API.
           </p>
           <p className="mt-3 text-sm leading-7">
             The report also names the path that confused the agent. APIProof does not change the spec.
@@ -85,6 +88,20 @@ export default function HomePage() {
             <li className="rounded-md bg-paper px-3 py-2">POST /customers → 201 · id cus_1001</li>
             <li className="rounded-md bg-paper px-3 py-2">GET /invoices/cus_demo → 404</li>
           </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-line bg-card/40" aria-labelledby="gallery-heading">
+        <div className="mx-auto max-w-6xl px-5 py-14">
+          <h2 id="gallery-heading" className="font-serif text-3xl tracking-tight">
+            Gallery
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-7">
+            Example reports on well-known public APIs, including Stripe, GitHub, and Slack. Each one uses a trimmed public spec and a fixed set of tasks. The reports are refreshed weekly.
+          </p>
+          <Link href="/gallery" className="mt-4 inline-block text-sm text-pine">
+            Browse the gallery
+          </Link>
         </div>
       </section>
 

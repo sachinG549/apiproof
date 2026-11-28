@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getStore } from "@/lib/db";
 import { loadGalleryCatalog } from "@/lib/gallery/load";
 import { getReport } from "@/lib/runs/service";
+import { unscoredReasons } from "@/lib/unscored";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Gallery" };
@@ -31,9 +32,9 @@ export default async function GalleryPage() {
       <p className="text-xs uppercase tracking-[0.16em] text-pine">Public specs</p>
       <h1 className="mt-2 font-serif text-5xl tracking-tight">Gallery</h1>
       <p className="mt-4 max-w-2xl text-sm leading-6">
-        Nine public OpenAPI documents, each with a fixed task list. Large specs are trimmed and the trim is written on the card.
+        Example reports for well-known public APIs. Large specs are trimmed, and the card says what was kept. Reports are refreshed weekly.
         {measured === 0
-          ? " No measured run is stored yet. POST /api/admin/gallery/seed on the deployed app fills these cards from the server's model keys. Nothing here is a placeholder score."
+          ? " No measured run is stored yet. Nothing here is a placeholder score."
           : ` ${measured} of ${cards.length} have a measured run.`}
       </p>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -53,11 +54,12 @@ export default async function GalleryPage() {
                 {report.summary.models.map((model) => {
                   const decided = model.passed + model.failed;
                   const rate = decided ? Math.round((model.passed / decided) * 100) : null;
+                  const reasons = unscoredReasons(report.results.filter((result) => result.modelId === model.modelId));
                   return (
                     <p key={model.modelId}>
                       {model.modelLabel}: {rate == null ? "Unscored" : `${rate}% pass`}
                       {decided ? ` (${model.passed}/${decided} scored)` : ""}
-                      {model.unscored ? ` · ${model.unscored} unscored (quota, timeout, or overload)` : ""}
+                      {model.unscored ? ` · ${model.unscored} unscored: ${reasons.join(", ")}` : ""}
                     </p>
                   );
                 })}
