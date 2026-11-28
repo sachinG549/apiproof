@@ -13,11 +13,13 @@ export async function runTask(input: {
   task: string;
   provider: LlmProvider;
   timeoutMs?: number;
+  stepTimeoutMs?: number;
   maxSteps?: number;
 }): Promise<TaskRunResult> {
   const started = Date.now();
   const config = getConfig();
   const timeoutMs = input.timeoutMs ?? config.taskTimeoutMs;
+  const stepTimeoutMs = input.stepTimeoutMs ?? config.stepTimeoutMs;
   const maxSteps = input.maxSteps ?? config.maxAgentSteps;
   const tools = operationsToTools(input.spec);
   const mock = new MockApi(input.spec);
@@ -27,8 +29,8 @@ export async function runTask(input: {
   let completionTokens = 0;
   let usedFallback = false;
   let finalText = "";
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const deadline = started + timeoutMs;
 
   const messages: ChatMessage[] = [
     {
@@ -50,7 +52,22 @@ export async function runTask(input: {
 
   try {
     for (let step = 0; step < maxSteps; step += 1) {
-      const completion = await input.provider.complete(messages, tools, controller.signal);
+      const remaining = deadline - Date.now();
+      if (remaining < 1_500) {
+        timedOut = true;
+        break;
+      }
+      const stepSignal = AbortSignal.timeout(Math.min(stepTimeoutMs, remaining));
+      let completion;
+      try {
+        completion = await input.provider.complete(messages, tools, stepSignal);
+      } catch (error) {
+        if (isAbort(error) || stepSignal.aborted) {
+          timedOut = true;
+          break;
+        }
+        throw error;
+      }
       promptTokens += completion.promptTokens;
       completionTokens += completion.completionTokens;
       if (completion.usedFallback) usedFallback = true;
@@ -62,7 +79,12 @@ export async function runTask(input: {
       if (completion.content.trim()) {
         steps.push({ index: steps.length, kind: "reasoning", reasoning: truncateText(completion.content.trim(), 800) });
       }
-      messages.push({ role: "assistant", content: completion.content, toolCalls: completion.toolCalls });
+      messages.push({
+        role: "assistant",
+        content: completion.content,
+        toolCalls: completion.toolCalls,
+        geminiParts: completion.geminiParts,
+      });
       for (const call of completion.toolCalls) {
         const tool = tools.find((item) => item.name === call.name);
         if (!tool) {
@@ -100,6 +122,24 @@ export async function runTask(input: {
         });
       }
     }
+    if (timedOut) {
+      return {
+        status: "error",
+        passed: null,
+        failureMode: null,
+        explanation:
+          "This task ran out of time before the model finished. Each model call has its own time limit so a slow step can fall back instead of consuming the whole run. The steps above were not scored.",
+        suggestion: null,
+        steps,
+        latencyMs: Date.now() - started,
+        promptTokens,
+        completionTokens,
+        checkSource: "unscored",
+        usedFallback,
+        modelLabel: input.provider.label,
+        error: "Timed out",
+      };
+    }
     const plan = planTask(input.task, input.spec.operations);
     const evaluation = await evaluateTask({
       task: input.task,
@@ -124,19 +164,22 @@ export async function runTask(input: {
       modelLabel: input.provider.label,
     };
   } catch (error) {
-    const aborted = controller.signal.aborted || (error instanceof Error && error.name === "AbortError");
+    const aborted = isAbort(error);
     const quota = error instanceof ProviderError && error.status === 429;
+    const overloaded = error instanceof ProviderError && error.status === 503;
     return {
       status: "error",
       passed: null,
       failureMode: quota ? "quota_exhausted" : null,
       explanation: aborted
-        ? "This task exceeded the time budget for a single request. The rest of the run continues."
+        ? "This task ran out of time before the model finished. It was not scored."
         : quota
           ? `${input.provider.label} is out of free-tier quota after backoff and fallback. This is not a spec failure.`
-          : error instanceof Error
-            ? error.message
-            : "The model request failed.",
+          : overloaded
+            ? `${input.provider.label} stayed under high demand after a retry and the fallback model. This was not scored.`
+            : error instanceof Error
+              ? error.message
+              : "The model request failed.",
       suggestion: null,
       steps,
       latencyMs: Date.now() - started,
@@ -145,9 +188,11 @@ export async function runTask(input: {
       checkSource: "unscored",
       usedFallback,
       modelLabel: input.provider.label,
-      error: aborted ? "Timed out" : quota ? "Quota exhausted" : "Model request failed",
+      error: aborted ? "Timed out" : quota ? "Quota exhausted" : overloaded ? "Model overloaded" : "Model request failed",
     };
-  } finally {
-    clearTimeout(timer);
   }
+}
+
+function isAbort(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }

@@ -16,10 +16,12 @@ export type AppConfig = {
   rateLimitSalt: string;
   maxAgentSteps: number;
   taskTimeoutMs: number;
+  stepTimeoutMs: number;
   groqModel: string;
   groqFallbackModel: string;
   geminiModel: string;
   geminiFallbackModel: string;
+  geminiThinkingLevel: string;
   adminToken: string;
   siteUrl: string;
   hasGroq: boolean;
@@ -46,10 +48,12 @@ export function getConfig(): AppConfig {
     rateLimitSalt: process.env.RATE_LIMIT_SALT || "apiproof",
     maxAgentSteps: intEnv("MAX_AGENT_STEPS", 6),
     taskTimeoutMs: intEnv("TASK_TIMEOUT_MS", 40_000),
+    stepTimeoutMs: intEnv("STEP_TIMEOUT_MS", 18_000),
     groqModel: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
     groqFallbackModel: process.env.GROQ_FALLBACK_MODEL || "openai/gpt-oss-20b",
-    geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-    geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || "gemini-2.0-flash",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+    geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || "gemini-3.8-flash",
+    geminiThinkingLevel: process.env.GEMINI_THINKING_LEVEL || "",
     adminToken: process.env.ADMIN_TOKEN || "",
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     hasGroq,

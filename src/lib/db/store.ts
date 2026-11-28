@@ -70,6 +70,7 @@ export interface Store {
   createRun(run: RunRecord, results: ResultRecord[]): Promise<void>;
   getRun(id: string): Promise<RunRecord | null>;
   findCached(cacheKey: string): Promise<RunRecord | null>;
+  listByCachePrefix(prefix: string): Promise<RunRecord[]>;
   listResults(runId: string): Promise<ResultRecord[]>;
   claimNext(runId: string, modelId?: string): Promise<ResultRecord | null>;
   reclaimStale(runId: string, olderThanMs: number): Promise<void>;
@@ -113,6 +114,11 @@ export function createMemoryStore(): Store {
         if (run.cacheKey === cacheKey && run.status === "complete") return run;
       }
       return null;
+    },
+    async listByCachePrefix(prefix) {
+      return [...state.runs.values()]
+        .filter((run) => run.cacheKey.startsWith(prefix))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     },
     async listResults(runId) {
       return [...state.results.values()]

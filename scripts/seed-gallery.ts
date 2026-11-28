@@ -1,8 +1,4 @@
-import { readFileSync } from "fs";
-import path from "path";
-import { GALLERY_SOURCES } from "../src/lib/gallery/sources";
-import { getStore } from "../src/lib/db";
-import { advanceRun, createRun, getReport } from "../src/lib/runs/service";
+import { seedGalleryStep } from "../src/lib/gallery/seed";
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -18,38 +14,17 @@ async function main() {
     process.exit(1);
   }
 
-  const store = getStore();
-  for (const source of GALLERY_SOURCES) {
-    const file = path.join(process.cwd(), "src/data/gallery", `${source.slug}.json`);
-    const specText = readFileSync(file, "utf8");
-    console.log(`\n${source.name}`);
-    const created = await createRun({
-      specText,
-      tasks: source.tasks,
-      ip: "gallery-seed",
-      store,
-      skipRateLimit: true,
-      bypassCache: true,
-      noticeExtra: source.note,
-    });
-    let report = await getReport(created.id, store);
-    let guard = 0;
-    while (report && report.run.status !== "complete" && report.run.status !== "error" && guard < 80) {
-      guard += 1;
-      report = await advanceRun(created.id, store);
-      const done = report.results.filter((result) => result.status === "done" || result.status === "error").length;
-      console.log(`  ${done}/${report.results.length} ${report.summary.models.map((model) => `${model.modelLabel} ${model.passed}/${model.total - model.unscored || model.total}`).join(" · ")}`);
+  const session = `local${Date.now().toString(36)}`.slice(0, 40);
+  for (let step = 0; step < 200; step += 1) {
+    const result = await seedGalleryStep({ session });
+    const where = result.slug ? `${result.slug} ${result.status}` : "idle";
+    console.log(`${result.completedSpecs.length} done, ${result.remainingSpecs.length} left · ${where}`);
+    if (result.done) {
+      console.log("Gallery seed complete.");
+      return;
     }
-    if (!report || report.run.status !== "complete") {
-      throw new Error(`${source.slug} did not finish (status ${report?.run.status || "missing"}).`);
-    }
-    await store.upsertGallery(source.slug, created.id);
-    const summary = report.summary.models
-      .map((model) => `${model.modelLabel}: ${model.passed} passed, ${model.failed} failed, ${model.unscored} unscored`)
-      .join("; ");
-    console.log(`  stored ${created.id} — ${summary}`);
   }
-  console.log("\nGallery seed complete.");
+  throw new Error("Gallery seed did not finish within 200 chunks.");
 }
 
 main().catch((error) => {

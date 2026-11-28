@@ -33,7 +33,7 @@ export default async function GalleryPage() {
       <p className="mt-4 max-w-2xl text-sm leading-6">
         Nine public OpenAPI documents, each with a fixed task list. Large specs are trimmed and the trim is written on the card.
         {measured === 0
-          ? " No measured run is stored yet. npm run gallery:seed, with a database and a model key, fills these cards. Nothing here is a placeholder score."
+          ? " No measured run is stored yet. POST /api/admin/gallery/seed on the deployed app fills these cards from the server's model keys. Nothing here is a placeholder score."
           : ` ${measured} of ${cards.length} have a measured run.`}
       </p>
       <div className="mt-8 grid gap-4 md:grid-cols-2">

@@ -20,6 +20,7 @@ export async function createRun(input: {
   skipRateLimit?: boolean;
   bypassCache?: boolean;
   noticeExtra?: string;
+  cacheKey?: string;
 }): Promise<{ id: string; cached: boolean }> {
   const config = getConfig();
   if (input.specText.length > config.maxSpecBytes) {
@@ -32,7 +33,7 @@ export async function createRun(input: {
     throw new UserError("Add GROQ_API_KEY or GEMINI_API_KEY before starting a run. APIProof does not call real third-party APIs, but it does need a model to attempt the tasks.");
   }
   const store = input.store || getStore();
-  const cacheKey = sha256(
+  const cacheKey = input.cacheKey || sha256(
     [
       stableStringify(parsed.document),
       tasks.map((task) => task.trim().replace(/\s+/g, " ").toLowerCase()).join("\n"),
